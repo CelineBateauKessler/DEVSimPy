@@ -27,6 +27,7 @@ _ = gettext.gettext
 import InteractionSocket
 import json
 import pusher
+import Queue
 
 sys.path.append(os.path.join('Domain', 'Phidgets'))
 
@@ -97,6 +98,7 @@ def makeSimulation(master, T, simu_name="simu", is_remote=False, json_trace=True
     json_report['summary'] += "...Performing DEVS simulation"
 
     CPUduration = 0.0
+    masterAtomicModels = master.getFlatComponentSet().values()
     interactionManager = None
     try:
         if is_remote:
@@ -106,24 +108,34 @@ def makeSimulation(master, T, simu_name="simu", is_remote=False, json_trace=True
             simuPusher = PrintPusher(simu_name)
         
         ### Get live stream URL if exist :
-        for m in filter(lambda a: hasattr(a, 'plotUrl'), master.componentSet):
+        for m in filter(lambda a: hasattr(a, 'plotUrl'), masterAtomicModels):
             if m.plotUrl != '':
                 json_report['output'].append({'label':m.name, 'plotUrl':m.plotUrl})          
         ### Get live stream URL if exist :
-        for m in filter(lambda a: hasattr(a, 'pusherChannel'), master.componentSet):
+        for m in filter(lambda a: hasattr(a, 'pusherChannel'), masterAtomicModels):
             m.pusherChannel = simu_name
-            json_report['output'].append({'label':m.name, 'pusherChannel':m.pusherChannel}) 
+            json_report['output'].append({'label':m.name, 'pusherChannel':m.pusherChannel})
         # Send to user 
         simuPusher.push('live_streams', {'live_streams': json_report['output']})
         
+        if is_remote:
+            # Socket service for WebService <--> Simulation SocketServer communication
+            socket_id='socket_'+simu_name
+            interactionManager = InteractionManager(socket_id=socket_id)#, simulation_thread=thread)
+            interactionManager.start()
+            # Queue for SocketServer <--> Model communication
+            interactionQueue = Queue.Queue()
+            # TODO : better test
+            for m in filter(lambda a: hasattr(a, 'setInteraction'), masterAtomicModels):
+                print('INTERACTION QUEUE SET')
+                m.setInteraction(interactionQueue)
+
         sim = runSimulation(master, T)
         thread = sim.Run()
-        
-        if is_remote:
-            # Socket service for WebService <--> Simulation communication
-            socket_id='socket_'+simu_name
-            interactionManager = InteractionManager(socket_id=socket_id, simulation_thread=thread)
-            interactionManager.start()
+
+        if interactionManager!=None :
+            interactionManager.setSimulationThread(thread)
+            interactionManager.setInteractionQueue(interactionQueue)
 
         first_real_time = time.time()
         progress = 0
@@ -165,12 +177,13 @@ def makeSimulation(master, T, simu_name="simu", is_remote=False, json_trace=True
             fn ='%s%s.dat'%(m.fileName,str(i))
             if os.path.exists(fn):
                 json_report['output'].append({'label':m.name+'_port_' + str(i),
+                                              #'filename':fn})
                                               'filename':os.path.basename(fn)}) 
-    for m in filter(lambda a: hasattr(a, 'plotUrl'), master.componentSet):
+    for m in filter(lambda a: hasattr(a, 'plotUrl'), masterAtomicModels):
         json_report['output'].append({'label':m.name, 'plotUrl':m.plotUrl}) 
             
     with open(simu_name+'.report', 'w') as f:
-            f.write(json.dumps(json_report))
+        f.write(json.dumps(json_report))
 
     return True
 
@@ -222,6 +235,7 @@ class runSimulation:
                 dir_fn = os.path.dirname(diagram.last_name_saved).replace('\t','').replace(' ','')
                 label = m.getBlockModel()
                 m.fileName = os.path.join(dir_fn,"%s_%s"%(os.path.basename(diagram.last_name_saved).split('.')[0],os.path.basename(m.fileName)))
+                 
         ################################################################################################################
         ################################################################################################################
         #print __builtin__.__dict__

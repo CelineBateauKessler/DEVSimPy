@@ -106,7 +106,8 @@ class YAMLHandler:
                      "position":{"x":c.x[0],"y":c.y[0]},
                      "inPorts":map(lambda i: "in%d"%i, range(c.input)),
                      "outPorts":map(lambda i: "out%d"%i, range(c.output)),
-                     "attrs":{"text": {"text":c.label}}
+                     "attrs":{"text": {"text":c.label}},
+                     "prop" :{"data" : c.args}
                      }
 
                 ### embeds key
@@ -125,7 +126,8 @@ class YAMLHandler:
                          "id":str(id(c)),
                          "z":0,"attrs":{},
                          'source':{"selector":".outPorts>g:nth-child(1)>circle"},
-                         'target':{"selector":".inPorts>g:nth-child(1)>circle"}}
+                         'target':{"selector":".inPorts>g:nth-child(1)>circle"}
+                         }
                     model1, portNumber1 = c.input
                     model2, portNumber2 = c.output
 
@@ -163,7 +165,7 @@ class YAMLHandler:
 
                 else: #Input or Output port
                     D = None
-                    
+                     
                 if (D!= None):
                      self.json_obj['cells'].append(D)
 

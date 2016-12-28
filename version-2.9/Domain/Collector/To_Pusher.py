@@ -17,7 +17,7 @@ from QuickScope import *
 
 import random
 from decimal import *
-import os
+import os 
 from datetime import datetime
 import pusher
 import json
@@ -55,57 +55,78 @@ class To_Pusher(QuickScope):
 		#self.pusher_data = []
 		#self.push_time = datetime.today()
 		self.pusherChannel = pusherChannel
-		self.event = 'results'
+		self.event = 'output'
 
+		print(self.pusherChannel)
+		print(self.event)
 	###
 	def extTransition(self, *args):
 		"""
 		"""
-
-		n = len(self.IPorts)
-
-		for np in xrange(n):
-			### adapted with PyPDEVS
-			if hasattr(self, 'peek'):
-				msg = self.peek(self.IPorts[np])
-			else:
-				inputs = args[0]
-				msg = inputs.get(self.IPorts[np])
-
-			### init last_time
-			'''if self.timeLast == 0 and self.timeNext == INFINITY:
-				self.last_time_value[np] = 0.0
-
-			### init buffer
-			if np not in self.buffer.keys():
-				self.buffer[np] = 0.0'''
-
-			if msg:
-
-				# if step axis is chosen ...
-				
-				### adapted with PyPDEVS
+		
+		for port in self.IPorts:
+			
+			msgs = []
+			
+			# Get label
+			#############
+			# If the port has been given a name then use it as port Label
+			# otherwise use the name of the first source connected to this port
+			# Then if the message has a label use it
+			# otherwise use the port Label
+			if 'port' not in port.name :
+				# this means that the port has been given a specific name by the modeler
+				# then use this name
+				portLabel = port.name
+			else :
+				# If several sources are connected to 1 port
+				# the label will be the name of the first source
 				if hasattr(self, 'peek'):
-					t = float(msg.time)
-				else:
-					t = float(msg.time[0])
-
-				val = msg.value[0]
-
-				if isinstance(val, int) or isinstance(val, float):
-					v = float(val)
-				else:
-					v = val
-
-				result = {'time':t, 'value':v}
-				print(result)
-				self.pusher.trigger(self.pusherChannel, self.event, json.dumps(result))
-				#self.pusher_data.append({'label': str(t), 'value':str(v)})
+					portLabel = port.inLine[0].host.name 
+				else: # PyPDEVS
+					portLabel = port.inLine[0].hostDEVS.name
 				
-				#self.last_time_value[fn] = t
-				#self.buffer[fn] = v"""
-
-				del msg
+			if hasattr(self, 'peek'):
+				msg  = self.peek(port)
+				msgs =[{'label': portLabel, 
+						'result':{'time': msg.time, 'value':msg.value}}] 
+				if isinstance(msg.value, dict) and msg.value.has_key('label'):
+					msgs[len(msgs)-1]['label'] = msg.value['label']
+				#msgsVal  = [msg.value[0]]
+				#msgsTime = [msg.time] 
+				
+			else: #PyPDEVS adaptation
+				""" inputs is an array looking like that :
+				[value1, (time1, counter1), value2, (time2, counter2), ... ,valueN, (timeN, counterN)]
+				"""
+				inputs = args[0].get(port)
+				#print (inputs)
+				
+				if inputs :
+					isValue = True
+					for input in inputs:
+						if isValue:
+							value = input
+						else:
+							time = input[0]
+							msgs.append({'label':portLabel, 
+						    	       'result':{'time': time, 'value':value}}) 
+							if isinstance(value, dict) and value.has_key('label'):
+								msgs[len(msgs)-1]['label'] = value['label'] 
+						isValue = not isValue 
+					
+				"""if inputs:
+					msgsVal  = filter(lambda a: isinstance(a, dict), inputs)
+					msgsTime = filter(lambda a: isinstance(a, tuple), inputs)"""
+			
+			if len(msgs) > 0:
+				print('TO PUSHER :')
+				print(msgs)
+				self.pusher.trigger(self.pusherChannel, self.event, json.dumps(msgs))
+			#self.pusher_data.append({'label': str(t), 'value':str(v)})
+			
+			#self.last_time_value[fn] = t
+			#self.buffer[fn] = v"""
 
 		self.state["sigma"] = 0
 		return self.state

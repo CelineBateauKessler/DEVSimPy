@@ -26,10 +26,12 @@ class MySocketHandler(SocketServer.BaseRequestHandler):
         # request is the socket connected to the client
         self.data = self.request.recv(1024).strip()
 
-        log("*** reception " + self.data)
+        #log("*** reception " + self.data + ' T='+str(self.server.simulation_thread.model.myTimeAdvance))
         response = {}
         
-        if self.data == "PAUSE":
+        data = json.loads(self.data)
+        
+        if data['action'] == "PAUSE":
             self.server.simulation_thread.suspend()
             #while not self.server.simulation_thread.suspension_applied: pass TODO? modif Strategy needed
             response['status'] = 'PAUSED'
@@ -40,13 +42,13 @@ class MySocketHandler(SocketServer.BaseRequestHandler):
             if response['simulation_time'] == Infinity:
                 response['simulation_time'] = 'undefined'
 
-        elif self.data == "RESUME":
+        elif data['action'] == "RESUME":
             response['simulation_time'] = self.server.simulation_thread.model.myTimeAdvance
             self.server.simulation_thread.resume_thread()
             #while self.server.simulation_thread.suspension_applied:pass TODO? modif Strategy needed
             response['status'] = 'RESUMED'
 
-        else:
+        elif data['action'] == "PARAM":
             data       = json.loads(self.data)
             model_name = data['block_label']
             params     = data['block']
@@ -68,20 +70,33 @@ class MySocketHandler(SocketServer.BaseRequestHandler):
             else:
                 response['status'] = 'SIM_NOT_PAUSED'
 
+        elif data['action'] == "MSG":
+            self.server.interactionQueue.put(data['msg'])
+            response['status'] = 'OK'
+            response['simulation_time'] = self.server.simulation_thread.model.myTimeAdvance
+            
         self.request.send(json.dumps(response))
 
 class MySocketServer(Server):
 
-    def __init__(self, server_address, RequestHandlerClass, simulation_thread):
+    def __init__(self, server_address, RequestHandlerClass):
 
         if sys.platform == "win32":
             SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
         else:
             SocketServer.UnixStreamServer.__init__(self, server_address, RequestHandlerClass)
 
+        self.simulation_thread = None #simulation_thread
+        self._componentSet = [] #self.simulation_thread.model.getFlatComponentSet()
+        self.interactionQueue = None
+
+    def setSimulationThread(self, simulation_thread):
         self.simulation_thread = simulation_thread
         self._componentSet = self.simulation_thread.model.getFlatComponentSet()
 
+    def setInteractionQueue(self, interaction_queue):
+        self.interactionQueue = interaction_queue
+        
     def handle_error(self, request, client_address):
         sys.stderr.write('*** EXCEPTION handling msg in InteractionManager')
         sys.stderr.write(client_address)
@@ -90,7 +105,7 @@ class MySocketServer(Server):
 
 class InteractionManager(threading.Thread):
 
-    def __init__(self, socket_id, simulation_thread):
+    def __init__(self, socket_id):
 
         threading.Thread.__init__(self)
         self.daemon = True
@@ -100,7 +115,7 @@ class InteractionManager(threading.Thread):
             #self.server = MySocketServer(('localhost', 5555), MySocketHandler, simulation_thread)
 
             # UNIX socket server initialization
-            self.server = MySocketServer('\0' + socket_id, MySocketHandler, simulation_thread)
+            self.server = MySocketServer('\0' + socket_id, MySocketHandler)
 
             log('SocketServer created ** ')
                 
@@ -110,7 +125,12 @@ class InteractionManager(threading.Thread):
             #log (traceback.format_exc())
             raise
 
+    def setSimulationThread(self, simulation_thread):
+        self.server.setSimulationThread(simulation_thread)
 
+    def setInteractionQueue(self, interaction_queue):
+        self.server.setInteractionQueue(interaction_queue)
+        
     def run(self):
 
         if self.server:

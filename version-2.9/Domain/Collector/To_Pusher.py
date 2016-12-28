@@ -120,8 +120,8 @@ class To_Pusher(QuickScope):
 					msgsTime = filter(lambda a: isinstance(a, tuple), inputs)"""
 			
 			if len(msgs) > 0:
-				print('TO PUSHER :')
-				print(msgs)
+				#print('TO PUSHER :')
+				#print(msgs)
 				self.pusher.trigger(self.pusherChannel, self.event, json.dumps(msgs))
 			#self.pusher_data.append({'label': str(t), 'value':str(v)})
 			

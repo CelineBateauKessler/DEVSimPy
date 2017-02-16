@@ -20,6 +20,7 @@ from Domain.Markov_C import Grid_Env_Multiple_Agents, Feudal_Agent
 NB_SAMPLE_MIN = 5
 GAMMA         = 0.5
 EPSILON       = 0.1
+ALPHA         = 0.1
 
 # 4x4 grid ------------------------------------------------------------
 
@@ -67,34 +68,65 @@ LEVEL1_8x8 = {'A0' : ['c0', 'c1', 'c8', 'c9'],
               'A1' : ['c2', 'c3', 'c10', 'c11'],
               'A2' : ['c4', 'c5', 'c12', 'c13'],
               'A3' : ['c6', 'c7', 'c14', 'c15'],
-              'A4' : ['c6', 'c7', 'c14', 'c15'],
-              'A5' : ['c6', 'c7', 'c14', 'c15'],
-              'A6' : ['c6', 'c7', 'c14', 'c15'],
-              'A7' : ['c6', 'c7', 'c14', 'c15'],
-              'A8' : ['c6', 'c7', 'c14', 'c15'],
-              'A9' : ['c6', 'c7', 'c14', 'c15'],
-              'A10' : ['c6', 'c7', 'c14', 'c15'],
-              'A11' : ['c6', 'c7', 'c14', 'c15'],
-              'A12' : ['c6', 'c7', 'c14', 'c15'],
-              'A13' : ['c6', 'c7', 'c14', 'c15'],
-              'A14' : ['c6', 'c7', 'c14', 'c15'],
-              'A15' : ['c6', 'c7', 'c14', 'c15']
+              
+              'A4' : ['c16', 'c17', 'c24', 'c25'],
+              'A5' : ['c18', 'c19', 'c26', 'c27'],
+              'A6' : ['c20', 'c21', 'c28', 'c29'],
+              'A7' : ['c22', 'c23', 'c30', 'c31'],
+              
+              'A8' : ['c32', 'c33', 'c40', 'c41'],
+              'A9' : ['c34', 'c35', 'c42', 'c43'],
+              'A10' : ['c36', 'c37', 'c44', 'c45'],
+              'A11' : ['c38', 'c39', 'c46', 'c47'],
+              
+              'A12' : ['c48', 'c49', 'c56', 'c57'],
+              'A13' : ['c50', 'c51', 'c58', 'c59'],
+              'A14' : ['c52', 'c53', 'c60', 'c61'],
+              'A15' : ['c54', 'c55', 'c62', 'c63']
               }
 
-LEVEL2_8x8 = {'BO' : ['A0', 'A1', 'A4', 'A5'],
+LEVEL2_8x8 = {'B0' : ['A0', 'A1', 'A4', 'A5'],
               'B1' : ['A2', 'A3', 'A6', 'A7'],
               'B2' : ['A8', 'A9', 'A12', 'A13'],
               'B3' : ['A10', 'A11', 'A14', 'A15']}
 
 LEVEL3_8x8 = {'SUP' : ['B0', 'B1', 'B2', 'B3']}
 
-GRID_8x8= {'sixeX' : 8,
+GRID_8x8_EXIT = {'A0' : ['A1', 'A4'],
+                 'A1' : ['A0', 'A5', 'B1'],
+                 'A2' : ['A3', 'A6', 'B0'],
+                 'A3' : ['A2', 'A7'],
+
+                 'A4' : ['A0', 'A5', 'B2'],
+                 'A5' : ['A1', 'A4', 'B1', 'B2'],
+                 'A6' : ['A2', 'A7', 'B0', 'B3'],
+                 'A7' : ['A3', 'A6', 'B3'],
+                 
+                 'A8' : ['A9', 'A12', 'B0'],
+                 'A9' : ['A8', 'A13', 'B0', 'B3'],
+                 'A10' : ['A11', 'A14', 'B1', 'B2'],
+                 'A11' : ['A10', 'A15', 'B1'],
+                 
+                 'A12' : ['A8', 'A13'],
+                 'A13' : ['A9', 'A12', 'B3'],
+                 'A14' : ['A10', 'A15', 'B2'],
+                 'A15' : ['A11', 'A14'],
+    
+                 'B0' : ['B1', 'B2'],
+                 'B1' : ['B0', 'B3'],
+                 'B2' : ['B0', 'B3'],
+                 'B3' : ['B1', 'B2'],
+                 
+                 'SUP': []}
+
+GRID_8x8= {'sizeX' : 8,
            'sizeY' : 8,
            'forbidden' : [],
            'goal' : [[7,7]],
            'levels' : {'level1' : LEVEL1_8x8,
                        'level2' : LEVEL2_8x8,
-                       'level3' : LEVEL3_8x8}}
+                       'level3' : LEVEL3_8x8},
+           'exits' : GRID_8x8_EXIT}
 
 
 # 8x8 grid ------------------------------------------------------------
@@ -104,17 +136,17 @@ class Feudal_MDP_progCM(Master):
     ''' DEVS Class for the feudal MDP
     '''
 
-    def __init__(self, gridName='4x4', nbSampleMin=5, gamma=0.9, epsilon=0.1):
+    def __init__(self, gridName='8x8'):
         ''' Constructor.
         '''
         Master.__init__(self)
 
         if gridName == '4x4':
             grid  = GRID_4x4
-        elif gridName == '4x4':
+        elif gridName == '8x8':
             grid = GRID_8x8
         else:
-            grid = None
+            grid = None 
             
         # Pre-compute some correspondance tables
         L1agents = []
@@ -168,7 +200,7 @@ class Feudal_MDP_progCM(Master):
                             actions[s].append('GoTo'+s2)
                 print(actions)
                 
-                agent = Feudal_Agent.Feudal_Agent(a, grid['levels'][level], tasks, actions, isTopLevel, NB_SAMPLE_MIN, GAMMA, EPSILON);
+                agent = Feudal_Agent.Feudal_Agent(a, grid['levels'][level], tasks, actions, isTopLevel, NB_SAMPLE_MIN, GAMMA, EPSILON, ALPHA);
                 agent.name = a
                 agent.timeNext = agent.elapsed = 0
                 self.addSubModel(agent)

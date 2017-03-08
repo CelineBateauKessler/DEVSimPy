@@ -27,7 +27,7 @@ class Grid_Env_Multiple_Agents(DomainBehavior):
     ''' DEVS Class for the model Markov_Env
     '''
 
-    def __init__(self, maxX=4, maxY=4, forbidden=[], goals=[], agents=[], stateToAgent={}):
+    def __init__(self, maxX=4, maxY=4, forbidden=[], agents=[], stateToAgent={}):
         ''' Constructor.
         '''
         DomainBehavior.__init__(self)
@@ -64,14 +64,14 @@ class Grid_Env_Multiple_Agents(DomainBehavior):
         for c in forbidden :
             self.cellIsForbidden[c[0]][c[1]] = True
 
-        # Terminal cells
+        """# Terminal cells
         self.cellIsGoal = []
         for x in range(self.maxX):
             self.cellIsGoal.append([])
             for y in range(self.maxY):
                 self.cellIsGoal[x].append(False)
         for c in goals :
-            self.cellIsGoal[c[0]][c[1]] = True
+            self.cellIsGoal[c[0]][c[1]] = True"""
 
         # State to Agent correspondence table
         self.agents = agents
@@ -95,7 +95,8 @@ class Grid_Env_Multiple_Agents(DomainBehavior):
         
         elif requested_action == "NewEpisode":
             newPosition = [random.randint(0, self.maxX - 1), random.randint(0, self.maxY - 1)]
-            
+            while not self.positionIsAllowed(newPosition):
+                newPosition = [random.randint(0, self.maxX - 1), random.randint(0, self.maxY - 1)]
         else:
             #position        = self.stateToPosition(msg.value[0]['state'])
             # Action performed is non deterministic
@@ -125,7 +126,7 @@ class Grid_Env_Multiple_Agents(DomainBehavior):
         '''
         self.msgToAgent.time = self.timeNext
         activeAgent = self.stateToAgent[self.positionToState(self.currentPosition)]
-        #print("**** ENV ==> " + self.OPorts[self.agents.index(activeAgent)].name + ' ' + str(self.msgToAgent))
+        print("   ENV ==> " + self.OPorts[self.agents.index(activeAgent)].name + ' ' + str(self.msgToAgent))
         return self.poke(self.OPorts[self.agents.index(activeAgent)], self.msgToAgent)
 
 

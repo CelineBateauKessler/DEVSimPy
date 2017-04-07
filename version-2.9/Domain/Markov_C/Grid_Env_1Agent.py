@@ -2,11 +2,11 @@
 
 """
 -------------------------------------------------------------------------------
- Name:              Grid_Env_Multiple_Agents.py
+ Name:              Grid_Env_1Agent.py
  Model description:     Model a grid environment for a Markov Decision Process
-                        Several agents can interact with the environment.
+                        Only 1 agent can interact with the environment.
                         The environnement is a grid.
-                        It receives a position and an action as inputs and returns the resulting position
+                        It receives an action as input and returns the resulting position
  Authors:           C. Kessler
  Organization:      UDCPP
  Current date & time:   2017-02-12 14:02:54.868000
@@ -24,11 +24,11 @@ import os
 ACTIONS = ['north', 'east', 'south', 'west']
 
 ### Model class ----------------------------------------------------------------
-class Grid_Env_Multiple_Agents(DomainBehavior):
+class Grid_Env_1Agent(DomainBehavior):
     ''' DEVS Class for the model Markov_Env
     '''
 
-    def __init__(self, maxX=4, maxY=4, forbidden=[], agents=[], stateToAgent={}):
+    def __init__(self, maxX=8, maxY=8, forbidden=['c18','c19','c20','c28','c36','c44','c52','c51','c50'], goal='c34'):
         ''' Constructor.
         '''
         DomainBehavior.__init__(self)
@@ -63,7 +63,8 @@ class Grid_Env_Multiple_Agents(DomainBehavior):
             for y in range(self.maxY):
                 self.cellIsForbidden[x].append(False)
         for c in forbidden :
-            self.cellIsForbidden[c[0]][c[1]] = True
+            pos = self.stateToPosition(c)
+            self.cellIsForbidden[pos[0]][pos[1]] = True
 
         # Visits Counter
         self.counter = []
@@ -72,24 +73,15 @@ class Grid_Env_Multiple_Agents(DomainBehavior):
             for y in range(self.maxY):
                 self.counter[x].append({'visit' : 0, 'start' : 0})
 
-        """# Terminal cells
-        self.cellIsGoal = []
-        for x in range(self.maxX):
-            self.cellIsGoal.append([])
-            for y in range(self.maxY):
-                self.cellIsGoal[x].append(False)
-        for c in goals :
-            self.cellIsGoal[c[0]][c[1]] = True"""
+        # Terminal cells
+        self.goal = goal
 
-        # State to Agent correspondence table
-        self.agents = agents
-        self.stateToAgent = stateToAgent
-
-        self.activeAgent     = None
+        # State
         self.currentPosition = None
+
         self.msgToAgent      = Message (None, None)
 
-        self.initPhase('IDLE',INFINITY)
+        self.initPhase('IDLE', INFINITY)
 
     def extTransition(self, *args):
         ''' DEVS external transition function.
@@ -122,9 +114,9 @@ class Grid_Env_Multiple_Agents(DomainBehavior):
             newPosition = self.move(self.currentPosition, effective_action)
             self.counter[newPosition[0]][newPosition[1]]['visit'] += 1
 
-        self.msgToAgent.value = [{'state'  : self.positionToState(newPosition),
-                                  #'isGoal' : self.cellIsGoal[newPosition[0]][newPosition[1]],
-                                  'nbSteps' : 1}]
+        newState = self.positionToState(newPosition)
+        self.msgToAgent.value = [{'state'  : newState,
+                                  'isGoal' : (newState == self.goal)}]
 
         self.currentPosition = newPosition
 
@@ -136,9 +128,8 @@ class Grid_Env_Multiple_Agents(DomainBehavior):
         ''' DEVS output function.
         '''
         self.msgToAgent.time = self.timeNext
-        activeAgent = self.stateToAgent[self.positionToState(self.currentPosition)]
-        #print("   ENV ==> " + self.OPorts[self.agents.index(activeAgent)].name + ' ' + str(self.msgToAgent))
-        return self.poke(self.OPorts[self.agents.index(activeAgent)], self.msgToAgent)
+        #print("   ENV ==> " + self.OPorts[0].name + ' ' + str(self.msgToAgent))
+        return self.poke(self.OPorts[0], self.msgToAgent)
 
 
     def intTransition(self):

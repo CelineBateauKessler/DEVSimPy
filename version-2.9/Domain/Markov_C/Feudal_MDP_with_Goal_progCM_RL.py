@@ -23,9 +23,12 @@ import copy
 EPSILON    = 0.1
 ALPHA      = 0.1
 # These 3 last parameters are connected
+"""REWARD_MAX = 4   # Depends on the mean number of steps to exit a state - connected to penalty
+GAMMA      = 0.5 # The closer to 1, the more future rewards are taken into account, if too high, the process does not find the shortest way
+PENALTY    = 1.0 #"""
 REWARD_MAX = 4 # Depends on the mean number of steps to exit a state - connected to penalty
 GAMMA      = 0.8 # The closer to 1, the more future rewards are taken into account, if too high, the process does not find the shortest way
-#PENALTY    = 1.0 #
+PENALTY    = 1.0 #
 
 # Utility of action South in cell c50 for task Exit to B3
 # U(c50,South) = Reward - penaltyForStep + gamma*(Sum(P(S2|c50,South)*Max(a2)U(S2,a2))
@@ -59,13 +62,20 @@ LEVEL1_4x4 = {'A0' : ['c0', 'c1', 'c4', 'c5'],
 
 LEVEL2_4x4 = {'SUP' : ['A0', 'A1', 'A2', 'A3']}
 
+LEVEL1_4x4_EXIT = {'A0' : ['A1', 'A2'],
+                   'A1' : ['A0', 'A3'],
+                   'A2' : ['A0', 'A3'],
+                   'A3' : ['A1', 'A2'],
+                   'SUP': []}
+
 GRID_4x4= {'sizeX' : 4,
            'sizeY' : 4,
            'forbidden' : [],
            'levels' : {'level1' : LEVEL1_4x4,
-                       'level2' : LEVEL2_4x4}}
+                       'level2' : LEVEL2_4x4},
+           'exits'  : LEVEL1_4x4_EXIT}
 
-# 8x8 grid with 3 levels of agents ------------------------------------------------------------
+# 8x8 grid ------------------------------------------------------------
 # Cell id:
 #   0   8  16  24  32  40  48  56
 #   1   9  17  25  33  41  49  57
@@ -104,26 +114,66 @@ LEVEL2_8x8 = {'B0' : ['A0', 'A1', 'A4', 'A5'],
 
 LEVEL3_8x8 = {'SUP' : ['B0', 'B1', 'B2', 'B3']}
 
+"""GRID_8x8_EXIT = {'A0' : ['A1', 'A4'],
+                 'A1' : ['A0', 'A5', 'B1'],
+                 'A2' : ['A3', 'A6', 'B0'],
+                 'A3' : ['A2', 'A7'],
+
+                 'A4' : ['A0', 'A5', 'B2'],
+                 'A5' : ['A1', 'A4', 'B1', 'B2'],
+                 'A6' : ['A2', 'A7', 'B0', 'B3'],
+                 'A7' : ['A3', 'A6', 'B3'],
+
+                 'A8' : ['A9', 'A12', 'B0'],
+                 'A9' : ['A8', 'A13', 'B0', 'B3'],
+                 'A10' : ['A11', 'A14', 'B1', 'B2'],
+                 'A11' : ['A10', 'A15', 'B1'],
+
+                 'A12' : ['A8', 'A13'],
+                 'A13' : ['A9', 'A12', 'B3'],
+                 'A14' : ['A10', 'A15', 'B2'],
+                 'A15' : ['A11', 'A14'],
+
+                 'B0' : ['B1', 'B2'],
+                 'B1' : ['B0', 'B3'],
+                 'B2' : ['B0', 'B3'],
+                 'B3' : ['B1', 'B2'],
+
+                 'SUP': []}"""
+GRID_8x8_EXIT = {'A0' : ['A1', 'A4'],
+                 'A1' : ['A0', 'A5', 'B1'],
+                 'A2' : ['B0', 'A3', 'A6'],
+                 'A3' : ['A2', 'A7'],
+
+                 'A4' : ['A0', 'A5', 'B2'],
+                 'A5' : ['A4', 'B2'],
+                 'A6' : ['A2', 'A7', 'B3'],
+                 'A7' : ['A3', 'A6', 'B3'],
+
+                 'A8' : ['A9', 'A12', 'B0'],
+                 'A9' : ['A8', 'B0'],
+                 'A10' : ['A11', 'A14', 'B1'],
+                 'A11' : ['A10', 'A15', 'B1'],
+
+                 'A12' : ['A8', 'A13'],
+                 'A13' : ['A12', 'B3'],
+                 'A14' : ['A10', 'A15', 'B2'],
+                 'A15' : ['A11', 'A14'],
+
+                 'B0' : ['B1','B2'],
+                 'B1' : ['B0','B3'],
+                 'B2' : ['B0', 'B3'],
+                 'B3' : ['B1', 'B2'],
+
+                 'SUP': []}
+
 GRID_8x8= {'sizeX' : 8,
            'sizeY' : 8,
            'forbidden' : [[2,2],[2,3],[2,4],[3,4],[4,4],[5,4],[6,4],[6,3],[6,2]], # U-shape wall
-           'levels' : {'level1' : {'subset' : LEVEL1_8x8, 'exploreDuration' : 0},
-                       'level2' : {'subset' : LEVEL2_8x8, 'exploreDuration' : 1500},
-                       'level3' : {'subset' : LEVEL3_8x8, 'exploreDuration' : 2500}}}
-
-# 8x8 grid with 2 levels of agents ------------------------------------------------------------
-LEVEL1_8x8b = {'B0' : ['c0', 'c1', 'c8', 'c9', 'c16', 'c17', 'c24', 'c25', 'c2', 'c3', 'c10', 'c11', 'c18', 'c19', 'c26', 'c27'],
-              'B1' : ['c4', 'c5', 'c12', 'c13', 'c6', 'c7', 'c14', 'c15', 'c20', 'c21', 'c28', 'c29', 'c22', 'c23', 'c30', 'c31'],
-              'B2' : ['c32', 'c33', 'c40', 'c41', 'c34', 'c35', 'c42', 'c43','c48', 'c49', 'c56', 'c57', 'c50', 'c51', 'c58', 'c59'],
-              'B3' : ['c36', 'c37', 'c44', 'c45', 'c38', 'c39', 'c46', 'c47', 'c52', 'c53', 'c60', 'c61', 'c54', 'c55', 'c62', 'c63']}
-
-LEVEL2_8x8b = {'SUP' : ['B0', 'B1', 'B2', 'B3']}
-
-GRID_8x8b= {'sizeX' : 8,
-           'sizeY' : 8,
-           'forbidden' : [[2,2],[2,3],[2,4],[3,4],[4,4],[5,4],[6,4],[6,3],[6,2]], # U-shape wall
-           'levels' : {'level1' : {'subset' : LEVEL1_8x8b, 'exploreDuration' : 0},
-                       'level2' : {'subset' : LEVEL2_8x8b, 'exploreDuration' : 2000}}}
+           'levels' : {'level1' : LEVEL1_8x8,
+                       'level2' : LEVEL2_8x8,
+                       'level3' : LEVEL3_8x8},
+           'exits' : GRID_8x8_EXIT}
 
 
 # 8x8 grid ------------------------------------------------------------
@@ -142,17 +192,15 @@ class Feudal_MDP_with_Goal_progCM(Master):
             grid  = GRID_4x4
         elif gridName == '8x8':
             grid = GRID_8x8
-        elif gridName == '8x8b':
-            grid = GRID_8x8b
         else:
             grid = None
 
         # Pre-compute some correspondance tables
         L1agents = []
         L0stateToL1Agents = {}
-        for a in grid['levels']['level1']['subset']:
+        for a in grid['levels']['level1']:
             L1agents.append(a)
-            for s in grid['levels']['level1']['subset'][a]:
+            for s in grid['levels']['level1'][a]:
                 L0stateToL1Agents[s] = a
 
         #print(L1agents)
@@ -161,8 +209,8 @@ class Feudal_MDP_with_Goal_progCM(Master):
         # Turn cell goal as state goal
         goalTable = [goal]
         for level in grid['levels']:
-            for s in grid['levels'][level]['subset']:
-                if goal in grid['levels'][level]['subset'][s]:
+            for s in grid['levels'][level]:
+                if goal in grid['levels'][level][s]:
                     goalTable.append(s)
                     goal = s
         print(goalTable)
@@ -184,14 +232,20 @@ class Feudal_MDP_with_Goal_progCM(Master):
             print(level)
             self.agents[level] = {}
 
-            for a in grid['levels'][level]['subset']:
+            for a in grid['levels'][level]:
                 # Create agent
                 print('Create ' + a)
-                isTopLevel = (len(grid['levels'][level]['subset']) == 1)
+                isTopLevel = (len(grid['levels'][level]) == 1)
                 #print('States:')
-                states = grid['levels'][level]['subset'][a]
+                states = grid['levels'][level][a]
                 #print(states)
-
+                #print('Tasks:')
+                tasks = []
+                #for s in states:
+                #    tasks.append('Find'+s)
+                for s in grid['exits'][a]:
+                    tasks.append('ExitTo'+s)
+                #print(tasks)
                 #print('Actions')
                 actions = {}
                 if lowerLevel == None:
@@ -200,9 +254,14 @@ class Feudal_MDP_with_Goal_progCM(Master):
                 else:
                     for s in states:
                         actions[s] = []
+                        for s2 in grid['exits'][s]:
+                            actions[s].append('ExitTo'+s2)
+                    #for s in states:
+                    #    actions[s] = copy.deepcopy(self.agents[lowerLevel][s].getTasks())
+                #print(actions)
 
                 modelFilename = "TransitionModel_"+gridName+"_"+a+".json"
-                agent = Feudal_Agent_with_Goal.Feudal_Agent_with_Goal(a, modelFilename, grid['levels'][level]['subset'], actions, isTopLevel, lowerLevel == None, rewardMax, GAMMA, EPSILON, ALPHA, grid['levels'][level]['exploreDuration'])
+                agent = Feudal_Agent_with_Goal.Feudal_Agent_with_Goal(a, modelFilename, grid['levels'][level], tasks, actions, isTopLevel, rewardMax, GAMMA, EPSILON, ALPHA, PENALTY)
                 agent.name = a
                 agent.timeNext = agent.elapsed = 0
                 self.addSubModel(agent)
@@ -221,7 +280,7 @@ class Feudal_MDP_with_Goal_progCM(Master):
                     env.addOutPort("To"+a)
                     agent.addInPort("FromENV") # port 1
                     agent.addOutPort("ToENV") # port 1
-                    agentIndex = grid['levels'][level]['subset'].keys().index(a)
+                    agentIndex = grid['levels'][level].keys().index(a)
                     self.connectPorts(env.OPorts[agentIndex], agent.IPorts[1])
                     self.connectPorts(agent.OPorts[1], env.IPorts[0])
                 else :
@@ -233,4 +292,4 @@ class Feudal_MDP_with_Goal_progCM(Master):
                         self.connectPorts(self.agents[lowerLevel][a2].OPorts[0], agent.IPorts[1])
 
             lowerLevel = level
-            #rewardMax *= len(grid['levels'][level])
+            rewardMax *= len(grid['levels'][level])

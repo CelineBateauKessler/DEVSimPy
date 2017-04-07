@@ -106,7 +106,10 @@ class To_Pusher(QuickScope):
 					isValue = True
 					for input in inputs:
 						if isValue:
-							value = input
+							try:
+								value = input[0]
+							except:
+								value = input
 						else:
 							time = input[0]
 							msgs.append({'label':portLabel, 

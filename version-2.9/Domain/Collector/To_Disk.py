@@ -37,6 +37,7 @@ class To_Disk(QuickScope):
 
 		# local copy
 		self.fileName = fileName
+		print(self.fileName)
 		self.comma = comma
 		self.ext = ext
 		self.col = col
